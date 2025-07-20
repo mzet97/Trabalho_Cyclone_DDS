@@ -1,0 +1,16 @@
+# Dependências para sistema de medição RTT com Eclipse Cyclone DDS
+
+# Eclipse Cyclone DDS Python bindings
+# Use cyclonedds para a versão oficial
+cyclonedds>=0.10.0
+
+# Dependências adicionais para análise de dados (opcional)
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+
+# Dependências para desenvolvimento e testes (opcional)
+pytest>=6.0.0
+pytest-cov>=2.12.0
+flake8>=3.9.0
+black>=21.0.0

@@ -1,0 +1,16 @@
+// Definição IDL para tipos de dados RTT
+// Este arquivo define as estruturas de dados para medição de Round-Trip Time
+
+module RTTTypes {
+    // Estrutura para requisição RTT
+    struct RTTRequest {
+        long id;                    // ID único para correlacionar pedido e resposta
+        sequence<octet> data;       // Payload de dados variável
+    };
+    
+    // Estrutura para resposta RTT
+    struct RTTResponse {
+        long id;                    // ID correspondente ao pedido
+        sequence<octet> data;       // Mesmo payload retornado
+    };
+};
