@@ -47,11 +47,9 @@ class RTTClient:
         self.timeout_ms = timeout_ms
         self.request_id = 0
         
-        # Tamanhos de payload em potências de dois
+        # Tamanhos de payload em potências de dois (2^0 até 2^17)
         self.payload_sizes = [
-            2, 4, 8, 16, 32, 64, 128, 256,
-            512, 1024, 2048, 4096, 8192,
-            16384, 32768, 65507
+            2**i for i in range(18)  # 2^0 até 2^17: 1, 2, 4, 8, ..., 131072
         ]
         
         # Configuração de QoS para baixa latência

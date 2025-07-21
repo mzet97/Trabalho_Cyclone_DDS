@@ -2,7 +2,7 @@
 
 # Eclipse Cyclone DDS Python bindings
 # Use cyclonedds para a versão oficial
-cyclonedds>=0.10.0
+cyclonedds-nightly>=2025.6.6
 
 # Dependências adicionais para análise de dados (opcional)
 numpy>=1.21.0

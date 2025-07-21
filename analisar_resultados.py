@@ -163,12 +163,15 @@ def calculate_statistics(data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
 
 def plot_rtt_by_size(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     """
-    Gera gráfico de RTT por tamanho de payload com desvio padrão.
+    Gera gráficos individuais de RTT por tamanho de payload com desvio padrão.
     
     Args:
         data: Dicionário com DataFrames de cada cliente
         output_dir: Diretório para salvar gráficos
     """
+    # Cria diretório de saída se não existir
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Combina dados de todos os clientes
     all_data = []
     for client_name, df in data.items():
@@ -185,63 +188,107 @@ def plot_rtt_by_size(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         'count', 'mean', 'std', 'min', 'max'
     ]).reset_index()
     
-    # Cria figura com subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
-    
     # Gráfico 1: RTT médio com desvio padrão
-    ax1.errorbar(stats['size'], stats['mean'], yerr=stats['std'], 
-                marker='o', capsize=8, capthick=3, linewidth=3, markersize=8,
-                color='blue', ecolor='lightblue', alpha=0.8)
+    plt.figure(figsize=(14, 8))
     
-    ax1.fill_between(stats['size'], 
+    plt.errorbar(stats['size'], stats['mean'], yerr=stats['std'], 
+                marker='o', capsize=8, capthick=3, linewidth=3, markersize=8,
+                color='blue', ecolor='lightblue', alpha=0.8, label='RTT Médio ± Desvio Padrão')
+    
+    plt.fill_between(stats['size'], 
                      stats['mean'] - stats['std'], 
                      stats['mean'] + stats['std'], 
-                     alpha=0.2, color='blue')
+                     alpha=0.2, color='blue', label='Área do Desvio Padrão')
     
-    ax1.set_xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
-    ax1.set_ylabel('RTT Médio (μs)', fontsize=12)
-    ax1.set_title('Round-Trip Time Médio por Tamanho de Payload\n(com Desvio Padrão - Escala Logarítmica Base 2)', fontsize=14, fontweight='bold')
-    ax1.grid(True, alpha=0.3)
-    ax1.set_xscale('log', base=2)
-    ax1.set_yscale('log')
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT Médio (μs)', fontsize=12)
+    plt.title('Round-Trip Time Médio por Tamanho de Payload\n(com Desvio Padrão - Escala Logarítmica Base 2)', fontsize=14, fontweight='bold')
+    plt.grid(True, alpha=0.3)
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    
+    # Adiciona marcações customizadas no eixo Y para todos os valores de desvio padrão
+    y_ticks_custom = []
+    
+    # Adiciona valores de média ± desvio padrão (apenas dentro do range desejado)
+    for _, row in stats.iterrows():
+        mean, std = row['mean'], row['std']
+        values = [mean - std, mean, mean + std]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
+    
+    # Remove duplicatas e ordena
+    y_ticks_custom = sorted(list(set(y_ticks_custom)))
+    
+    # Filtra valores válidos (positivos para escala log)
+    y_ticks_custom = [y for y in y_ticks_custom if y > 0]
+    
+    # Combina com ticks logarítmicos padrão dentro do range
+    current_ticks = plt.gca().get_yticks()
+    current_ticks = [t for t in current_ticks if 150 <= t <= 10000]
+    all_ticks = sorted(list(set(list(current_ticks) + y_ticks_custom)))
+    
+    # Filtra para evitar muitas marcações (mantém apenas valores significativos)
+    filtered_ticks = []
+    for tick in all_ticks:
+        if tick > 0 and (not filtered_ticks or tick / filtered_ticks[-1] > 1.2):
+            filtered_ticks.append(tick)
+    
+    plt.yticks(filtered_ticks, [f'{int(tick)}' if tick >= 1 else f'{tick:.1f}' for tick in filtered_ticks], fontsize=9)
+    
+    # Define os limites do eixo Y APÓS configurar os ticks
+    plt.ylim(150, 10000)
+    
+    plt.legend(fontsize=10)
     
     # Adiciona anotações com valores
     for _, row in stats.iterrows():
-        ax1.annotate(f'{row["mean"]:.0f}μs', 
+        plt.annotate(f'{row["mean"]:.0f}μs', 
                     (row['size'], row['mean']), 
                     textcoords="offset points", 
                     xytext=(0,10), ha='center', fontsize=9)
     
+    plt.tight_layout()
+    
+    # Salva gráfico 1
+    output_file1 = os.path.join(output_dir, 'rtt_mean_with_std.png')
+    plt.savefig(output_file1, dpi=300, bbox_inches='tight')
+    print(f"Gráfico RTT médio salvo: {output_file1}")
+    plt.close()
+    
     # Gráfico 2: Coeficiente de variação (CV = std/mean)
+    plt.figure(figsize=(14, 8))
+    
     cv = (stats['std'] / stats['mean']) * 100
-    ax2.bar(range(len(stats)), cv, color='orange', alpha=0.7)
-    ax2.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
-    ax2.set_ylabel('Coeficiente de Variação (%)', fontsize=12)
-    ax2.set_title('Variabilidade do RTT por Tamanho de Payload', fontsize=14, fontweight='bold')
-    ax2.set_xticks(range(len(stats)))
-    ax2.set_xticklabels([f'{int(size)}' for size in stats['size']], rotation=45)
-    ax2.grid(True, alpha=0.3, axis='y')
+    plt.bar(stats['size'], cv, color='orange', alpha=0.7, label='Coeficiente de Variação', width=stats['size']*0.3)
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('Coeficiente de Variação (%)', fontsize=12)
+    plt.title('Variabilidade do RTT por Tamanho de Payload', fontsize=14, fontweight='bold')
+    plt.xscale('log', base=2)
+    plt.grid(True, alpha=0.3, axis='y')
+    plt.legend(fontsize=10)
     
     # Adiciona valores no gráfico de barras
-    for i, v in enumerate(cv):
-        ax2.text(i, v + 0.5, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
+    for size, v in zip(stats['size'], cv):
+        plt.text(size, v + 0.5, f'{v:.1f}%', ha='center', va='bottom', fontsize=9)
     
     plt.tight_layout()
     
-    # Salva gráfico
-    output_file = os.path.join(output_dir, 'rtt_by_size_detailed.png')
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Gráfico detalhado salvo: {output_file}")
+    # Salva gráfico 2
+    output_file2 = os.path.join(output_dir, 'rtt_coefficient_variation.png')
+    plt.savefig(output_file2, dpi=300, bbox_inches='tight')
+    print(f"Gráfico coeficiente de variação salvo: {output_file2}")
     plt.close()
     
-    # Gráfico adicional: Box plot aprimorado com desvio padrão
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+    # Gráfico 3: Box plot principal
+    plt.figure(figsize=(14, 8))
     
     sizes = sorted(combined_df['size'].unique())
     rtt_data = [combined_df[combined_df['size'] == size]['rtt_us'].values for size in sizes]
     
     # Box plot principal
-    box_plot = ax1.boxplot(rtt_data, labels=[f'{int(size)}' for size in sizes], 
+    box_plot = plt.boxplot(rtt_data, tick_labels=[f'{int(size)}' for size in sizes], 
                           patch_artist=True, notch=True, showmeans=True)
     
     # Colorir as caixas
@@ -254,28 +301,48 @@ def plot_rtt_by_size(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     means = [np.mean(data) for data in rtt_data]
     stds = [np.std(data) for data in rtt_data]
     
-    ax1.errorbar(range(1, len(sizes) + 1), means, yerr=stds,
+    plt.errorbar(range(1, len(sizes) + 1), means, yerr=stds,
                 fmt='ro', capsize=8, capthick=3, linewidth=2, markersize=8,
                 ecolor='red', markerfacecolor='red', markeredgecolor='black',
                 label='Média ± Desvio Padrão', alpha=0.8)
     
-    ax1.set_xlabel('Tamanho do Payload (bytes)', fontsize=12)
-    ax1.set_ylabel('RTT (μs)', fontsize=12)
-    ax1.set_title('Distribuição de RTT por Tamanho de Payload\n(Box Plot com Média ± Desvio Padrão)', 
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT (μs)', fontsize=12)
+    plt.title('Distribuição de RTT por Tamanho de Payload\n(Box Plot com Média ± Desvio Padrão)', 
                  fontsize=14, fontweight='bold')
-    ax1.set_yscale('log')
+    plt.yscale('log')
+    
+    # Configura eixo X com escala log base 2 e posições corretas
+    plt.gca().set_xticks(range(1, len(sizes) + 1))
+    plt.gca().set_xticklabels([f'{int(size)}' for size in sizes])
+    
+    # Adiciona escala log base 2 simulada através de anotações
+    ax = plt.gca()
+    ax2 = ax.twiny()
+    ax2.set_xlim(ax.get_xlim())
+    ax2.set_xticks(range(1, len(sizes) + 1))
+    ax2.set_xticklabels([f'2^{int(np.log2(size))}' if size > 0 and np.log2(size).is_integer() else '' for size in sizes], fontsize=9)
+    ax2.set_xlabel('Potência de 2', fontsize=10, style='italic')
     
     # Adiciona marcações customizadas no eixo Y para todos os valores de desvio padrão
     y_ticks_custom = []
     
-    # Adiciona valores de média ± desvio padrão
+    # Adiciona valores de média ± desvio padrão (apenas dentro do range desejado)
     for mean, std in zip(means, stds):
-        y_ticks_custom.extend([mean - std, mean, mean + std])
+        values = [mean - std, mean, mean + std]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
     
-    # Adiciona valores mínimos e máximos dos dados
+    # Adiciona valores mínimos e máximos dos dados (apenas dentro do range)
     for data in rtt_data:
         if len(data) > 0:
-            y_ticks_custom.extend([np.min(data), np.max(data)])
+            min_val = np.min(data)
+            max_val = np.max(data)
+            if 150 <= min_val <= 10000:
+                y_ticks_custom.append(min_val)
+            if 150 <= max_val <= 10000:
+                y_ticks_custom.append(max_val)
     
     # Remove duplicatas e ordena
     y_ticks_custom = sorted(list(set(y_ticks_custom)))
@@ -283,8 +350,9 @@ def plot_rtt_by_size(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     # Filtra valores válidos (positivos para escala log)
     y_ticks_custom = [y for y in y_ticks_custom if y > 0]
     
-    # Combina com ticks logarítmicos padrão
-    current_ticks = ax1.get_yticks()
+    # Combina com ticks logarítmicos padrão dentro do range
+    current_ticks = plt.gca().get_yticks()
+    current_ticks = [t for t in current_ticks if 150 <= t <= 10000]
     all_ticks = sorted(list(set(list(current_ticks) + y_ticks_custom)))
     
     # Filtra para evitar muitas marcações (mantém apenas valores significativos)
@@ -293,53 +361,106 @@ def plot_rtt_by_size(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         if tick > 0 and (not filtered_ticks or tick / filtered_ticks[-1] > 1.2):
             filtered_ticks.append(tick)
     
-    ax1.set_yticks(filtered_ticks)
-    ax1.set_yticklabels([f'{int(tick)}' if tick >= 1 else f'{tick:.1f}' for tick in filtered_ticks], fontsize=9)
+    plt.yticks(filtered_ticks, [f'{int(tick)}' if tick >= 1 else f'{tick:.1f}' for tick in filtered_ticks], fontsize=9)
     
-    ax1.grid(True, alpha=0.3, axis='y')
-    ax1.tick_params(axis='x', rotation=45)
-    ax1.legend(fontsize=10)
+    # Define os limites do eixo Y APÓS configurar os ticks
+    plt.ylim(150, 10000)
     
-    # Gráfico de barras com desvio padrão (usando escala log base 2)
-    ax2.errorbar(sizes, means, yerr=stds, fmt='o-', capsize=8, capthick=3, 
+    plt.grid(True, alpha=0.3, axis='y')
+    plt.tick_params(axis='x', rotation=45)
+    plt.tick_params(axis='x', which='both', top=False)  # Remove ticks superiores do eixo principal
+    plt.legend(fontsize=10)
+    
+    plt.tight_layout()
+    
+    # Salva box plot
+    output_file_box = os.path.join(output_dir, 'rtt_boxplot.png')
+    plt.savefig(output_file_box, dpi=300, bbox_inches='tight')
+    print(f"Box plot salvo: {output_file_box}")
+    plt.close()
+    
+    # Gráfico 4: RTT médio com desvio padrão (escala log base 2)
+    plt.figure(figsize=(14, 8))
+    
+    plt.errorbar(sizes, means, yerr=stds, fmt='o-', capsize=8, capthick=3, 
                 linewidth=3, markersize=8, color='darkblue', ecolor='lightblue',
-                markerfacecolor='blue', markeredgecolor='black', alpha=0.8)
+                markerfacecolor='blue', markeredgecolor='black', alpha=0.8,
+                label='RTT Médio ± Desvio Padrão')
     
     # Área sombreada do desvio padrão
-    ax2.fill_between(sizes, np.array(means) - np.array(stds), 
-                    np.array(means) + np.array(stds), alpha=0.2, color='blue')
+    plt.fill_between(sizes, np.array(means) - np.array(stds), 
+                    np.array(means) + np.array(stds), alpha=0.2, color='blue',
+                    label='Área do Desvio Padrão')
     
     # Adiciona valores nas barras
     for size, mean, std in zip(sizes, means, stds):
-        ax2.annotate(f'{mean:.0f}μs\n±{std:.0f}', 
+        plt.annotate(f'{mean:.0f}μs\n±{std:.0f}', 
                     (size, mean + std), textcoords="offset points", 
                     xytext=(0,10), ha='center', va='bottom', 
                     fontsize=9, fontweight='bold')
     
-    ax2.set_xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
-    ax2.set_ylabel('RTT Médio (μs)', fontsize=12)
-    ax2.set_title('RTT Médio com Desvio Padrão por Tamanho de Payload\n(Escala Logarítmica Base 2)', 
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT Médio (μs)', fontsize=12)
+    plt.title('RTT Médio com Desvio Padrão por Tamanho de Payload\n(Escala Logarítmica Base 2)', 
                  fontsize=14, fontweight='bold')
-    ax2.set_xscale('log', base=2)
-    ax2.grid(True, alpha=0.3)
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    
+    # Adiciona marcações customizadas no eixo Y para todos os valores de desvio padrão
+    y_ticks_custom = []
+    
+    # Adiciona valores de média ± desvio padrão (apenas dentro do range desejado)
+    for mean, std in zip(means, stds):
+        values = [mean - std, mean, mean + std]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
+    
+    # Remove duplicatas e ordena
+    y_ticks_custom = sorted(list(set(y_ticks_custom)))
+    
+    # Filtra valores válidos (positivos para escala log)
+    y_ticks_custom = [y for y in y_ticks_custom if y > 0]
+    
+    # Combina com ticks logarítmicos padrão dentro do range
+    current_ticks = plt.gca().get_yticks()
+    current_ticks = [t for t in current_ticks if 150 <= t <= 10000]
+    all_ticks = sorted(list(set(list(current_ticks) + y_ticks_custom)))
+    
+    # Filtra para evitar muitas marcações (mantém apenas valores significativos)
+    filtered_ticks = []
+    for tick in all_ticks:
+        if tick > 0 and (not filtered_ticks or tick / filtered_ticks[-1] > 1.2):
+            filtered_ticks.append(tick)
+    
+    plt.yticks(filtered_ticks, [f'{int(tick)}' if tick >= 1 else f'{tick:.1f}' for tick in filtered_ticks], fontsize=9)
+    
+    # Define os limites do eixo Y APÓS configurar os ticks
+    plt.ylim(150, 10000)
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=10)
     
     plt.tight_layout()
     
-    # Salva box plot aprimorado
-    output_file_box = os.path.join(output_dir, 'rtt_boxplot.png')
-    plt.savefig(output_file_box, dpi=300, bbox_inches='tight')
-    print(f"Box plot aprimorado salvo: {output_file_box}")
+    # Salva gráfico de linha com escala log
+    output_file_line = os.path.join(output_dir, 'rtt_mean_log_scale.png')
+    plt.savefig(output_file_line, dpi=300, bbox_inches='tight')
+    print(f"Gráfico RTT médio (escala log) salvo: {output_file_line}")
     plt.close()
 
 
 def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     """
-    Gera gráfico de dispersão do RTT com desvio padrão.
+    Gera gráficos individuais de dispersão do RTT com desvio padrão.
     
     Args:
         data: Dicionário com DataFrames de cada cliente
         output_dir: Diretório para salvar gráficos
     """
+    # Cria diretório de saída se não existir
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Combina dados de todos os clientes
     all_data = []
     for client_name, df in data.items():
@@ -353,11 +474,8 @@ def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         
     combined_df = pd.concat(all_data, ignore_index=True)
     
-    # Cria figura com múltiplos subplots
-    fig = plt.figure(figsize=(16, 12))
-    
-    # Subplot 1: Dispersão geral com desvio padrão
-    ax1 = plt.subplot(2, 2, 1)
+    # Gráfico 1: Dispersão geral com desvio padrão
+    plt.figure(figsize=(14, 10))
     
     # Calcula estatísticas por tamanho para overlay
     stats = combined_df.groupby('size')['rtt_us'].agg(['mean', 'std']).reset_index()
@@ -368,27 +486,74 @@ def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     
     for i, size in enumerate(sorted(sizes)):
         size_data = combined_df[combined_df['size'] == size]
-        ax1.scatter(size_data['size'], size_data['rtt_us'], 
+        plt.scatter(size_data['size'], size_data['rtt_us'], 
                    alpha=0.6, s=30, color=colors[i], 
                    label=f'{int(size)} bytes (n={len(size_data)})')
     
     # Overlay com média e desvio padrão
-    ax1.errorbar(stats['size'], stats['mean'], yerr=stats['std'],
+    plt.errorbar(stats['size'], stats['mean'], yerr=stats['std'],
                 fmt='ko-', capsize=8, capthick=3, linewidth=3, markersize=8,
                 ecolor='red', markerfacecolor='red', markeredgecolor='black',
                 label='Média ± Desvio Padrão')
     
-    ax1.set_xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
-    ax1.set_ylabel('RTT (μs)', fontsize=12)
-    ax1.set_title('Dispersão de RTT por Tamanho de Payload\n(com Média e Desvio Padrão)', 
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT (μs)', fontsize=12)
+    plt.title('Dispersão de RTT por Tamanho de Payload\n(com Média e Desvio Padrão)', 
                  fontsize=14, fontweight='bold')
-    ax1.set_xscale('log', base=2)
-    ax1.set_yscale('log')
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    plt.ylim(150, 10000)
     
-    # Subplot 2: Dispersão por iteração com envelope de desvio padrão
-    ax2 = plt.subplot(2, 2, 2)
+    # Adiciona marcações customizadas no eixo Y com valores específicos e bem distribuídos
+    y_ticks_custom = []
+    
+    # Adiciona valores de média ± desvio padrão (apenas dentro do range desejado)
+    for _, row in stats.iterrows():
+        mean_val = row['mean']
+        std_val = row['std']
+        values = [mean_val - std_val, mean_val, mean_val + std_val]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
+    
+    # Define ticks logarítmicos específicos para melhor visualização
+    log_ticks = [150, 200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000, 7000, 10000]
+    
+    # Combina todos os valores
+    all_ticks = sorted(list(set(y_ticks_custom + log_ticks)))
+    
+    # Filtra para manter apenas valores dentro do range e com boa distribuição
+    filtered_ticks = []
+    for tick in all_ticks:
+        if 150 <= tick <= 10000:
+            # Adiciona o tick se for o primeiro ou se a diferença for significativa
+            if not filtered_ticks or (tick / filtered_ticks[-1] >= 1.2):
+                filtered_ticks.append(tick)
+    
+    # Garante que os valores extremos estejam incluídos
+    if 150 not in filtered_ticks:
+        filtered_ticks.insert(0, 150)
+    if 10000 not in filtered_ticks:
+        filtered_ticks.append(10000)
+    
+    # Ordena novamente
+    filtered_ticks = sorted(filtered_ticks)
+    
+    plt.yticks(filtered_ticks)
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+    
+    plt.tight_layout()
+    
+    # Salva gráfico 1
+    output_file1 = os.path.join(output_dir, 'rtt_scatter_general.png')
+    plt.savefig(output_file1, dpi=300, bbox_inches='tight')
+    print(f"Gráfico dispersão geral salvo: {output_file1}")
+    plt.close()
+    
+    # Gráfico 2: Dispersão por iteração com envelope de desvio padrão
+    plt.figure(figsize=(14, 8))
     
     # Seleciona alguns tamanhos representativos para visualização
     representative_sizes = sorted(sizes)[:6]  # Primeiros 6 tamanhos
@@ -403,28 +568,36 @@ def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
                 rolling_std = size_data['rtt_us'].rolling(window=window_size, center=True).std()
                 
                 # Plot dos pontos individuais
-                ax2.scatter(size_data['iteration'], size_data['rtt_us'], 
+                plt.scatter(size_data['iteration'], size_data['rtt_us'], 
                            alpha=0.4, s=20, color=colors[i], label=f'{int(size)} bytes')
                 
                 # Plot da média móvel
-                ax2.plot(size_data['iteration'], rolling_mean, 
+                plt.plot(size_data['iteration'], rolling_mean, 
                         color=colors[i], linewidth=2, alpha=0.8)
                 
                 # Envelope do desvio padrão
-                ax2.fill_between(size_data['iteration'], 
+                plt.fill_between(size_data['iteration'], 
                                rolling_mean - rolling_std, 
                                rolling_mean + rolling_std, 
                                alpha=0.2, color=colors[i])
     
-    ax2.set_xlabel('Iteração', fontsize=12)
-    ax2.set_ylabel('RTT (μs)', fontsize=12)
-    ax2.set_title('RTT por Iteração\n(Média Móvel ± Desvio Padrão)', 
+    plt.xlabel('Iteração', fontsize=12)
+    plt.ylabel('RTT (μs)', fontsize=12)
+    plt.title('RTT por Iteração\n(Média Móvel ± Desvio Padrão)', 
                  fontsize=14, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(fontsize=9)
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=9)
     
-    # Subplot 3: Dispersão com intervalos de confiança
-    ax3 = plt.subplot(2, 2, 3)
+    plt.tight_layout()
+    
+    # Salva gráfico 2
+    output_file2 = os.path.join(output_dir, 'rtt_scatter_iteration.png')
+    plt.savefig(output_file2, dpi=300, bbox_inches='tight')
+    print(f"Gráfico dispersão por iteração salvo: {output_file2}")
+    plt.close()
+    
+    # Gráfico 3: Dispersão com intervalos de confiança
+    plt.figure(figsize=(14, 8))
     
     # Calcula intervalos de confiança (95%)
     confidence_stats = combined_df.groupby('size')['rtt_us'].agg([
@@ -438,27 +611,74 @@ def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
     # Scatter plot com intervalos de confiança
     for i, size in enumerate(sorted(sizes)):
         size_data = combined_df[combined_df['size'] == size]
-        ax3.scatter(size_data['size'], size_data['rtt_us'], 
+        plt.scatter(size_data['size'], size_data['rtt_us'], 
                    alpha=0.3, s=20, color=colors[i])
     
     # Overlay com média e intervalo de confiança
-    ax3.errorbar(confidence_stats['size'], confidence_stats['mean'], 
+    plt.errorbar(confidence_stats['size'], confidence_stats['mean'], 
                 yerr=confidence_stats['ci_95'],
                 fmt='ro-', capsize=8, capthick=3, linewidth=3, markersize=8,
                 ecolor='darkred', markerfacecolor='red', markeredgecolor='black',
                 label='Média ± IC 95%')
     
-    ax3.set_xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
-    ax3.set_ylabel('RTT (μs)', fontsize=12)
-    ax3.set_title('RTT com Intervalos de Confiança (95%)\n(Dispersão + Média)', 
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT (μs)', fontsize=12)
+    plt.title('RTT com Intervalos de Confiança (95%)\n(Dispersão + Média)', 
                  fontsize=14, fontweight='bold')
-    ax3.set_xscale('log', base=2)
-    ax3.set_yscale('log')
-    ax3.grid(True, alpha=0.3)
-    ax3.legend(fontsize=10)
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    plt.ylim(150, 10000)
     
-    # Subplot 4: Heatmap de densidade RTT vs Tamanho
-    ax4 = plt.subplot(2, 2, 4)
+    # Adiciona marcações customizadas no eixo Y com valores específicos e bem distribuídos
+    y_ticks_custom = []
+    
+    # Adiciona valores de média ± intervalo de confiança (apenas dentro do range desejado)
+    for _, row in confidence_stats.iterrows():
+        mean_val = row['mean']
+        ci_val = row['ci_95']
+        values = [mean_val - ci_val, mean_val, mean_val + ci_val]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
+    
+    # Define ticks logarítmicos específicos para melhor visualização
+    log_ticks = [150, 200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000, 7000, 10000]
+    
+    # Combina todos os valores
+    all_ticks = sorted(list(set(y_ticks_custom + log_ticks)))
+    
+    # Filtra para manter apenas valores dentro do range e com boa distribuição
+    filtered_ticks = []
+    for tick in all_ticks:
+        if 150 <= tick <= 10000:
+            # Adiciona o tick se for o primeiro ou se a diferença for significativa
+            if not filtered_ticks or (tick / filtered_ticks[-1] >= 1.2):
+                filtered_ticks.append(tick)
+    
+    # Garante que os valores extremos estejam incluídos
+    if 150 not in filtered_ticks:
+        filtered_ticks.insert(0, 150)
+    if 10000 not in filtered_ticks:
+        filtered_ticks.append(10000)
+    
+    # Ordena novamente
+    filtered_ticks = sorted(filtered_ticks)
+    
+    plt.yticks(filtered_ticks)
+    
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=10)
+    
+    plt.tight_layout()
+    
+    # Salva gráfico 3
+    output_file3 = os.path.join(output_dir, 'rtt_scatter_confidence.png')
+    plt.savefig(output_file3, dpi=300, bbox_inches='tight')
+    print(f"Gráfico dispersão com IC salvo: {output_file3}")
+    plt.close()
+    
+    # Gráfico 4: Heatmap de densidade RTT vs Tamanho
+    plt.figure(figsize=(14, 8))
     
     # Cria bins para o heatmap
     size_bins = np.logspace(np.log10(combined_df['size'].min()), 
@@ -471,34 +691,68 @@ def plot_rtt_scatter(data: Dict[str, pd.DataFrame], output_dir: str = "."):
                                          bins=[size_bins, rtt_bins])
     
     # Plot do heatmap
-    im = ax4.imshow(hist.T, origin='lower', aspect='auto', 
+    im = plt.imshow(hist.T, origin='lower', aspect='auto', 
                    extent=[size_bins[0], size_bins[-1], rtt_bins[0], rtt_bins[-1]],
                    cmap='YlOrRd', alpha=0.8)
     
     # Overlay com média e desvio padrão
-    ax4.errorbar(stats['size'], stats['mean'], yerr=stats['std'],
+    plt.errorbar(stats['size'], stats['mean'], yerr=stats['std'],
                 fmt='bo-', capsize=6, capthick=2, linewidth=2, markersize=6,
                 ecolor='blue', markerfacecolor='blue', markeredgecolor='white',
                 label='Média ± Desvio Padrão')
     
-    ax4.set_xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
-    ax4.set_ylabel('RTT (μs)', fontsize=12)
-    ax4.set_title('Densidade de RTT vs Tamanho\n(Heatmap + Estatísticas)', 
+    plt.xlabel('Tamanho do Payload (bytes) - Escala Log Base 2', fontsize=12)
+    plt.ylabel('RTT (μs)', fontsize=12)
+    plt.title('Densidade de RTT vs Tamanho\n(Heatmap + Estatísticas)', 
                  fontsize=14, fontweight='bold')
-    ax4.set_xscale('log', base=2)
-    ax4.set_yscale('log')
-    ax4.legend(fontsize=10)
+    plt.xscale('log', base=2)
+    plt.yscale('log')
+    plt.ylim(150, 10000)
+    
+    # Adiciona marcações customizadas no eixo Y incluindo valores de desvio padrão
+    y_ticks_custom = []
+    
+    # Adiciona valores de média ± desvio padrão (apenas dentro do range desejado)
+    for _, row in stats.iterrows():
+        mean_val = row['mean']
+        std_val = row['std']
+        values = [mean_val - std_val, mean_val, mean_val + std_val]
+        # Filtra valores dentro do range 150-10000
+        values = [v for v in values if 150 <= v <= 10000]
+        y_ticks_custom.extend(values)
+    
+    # Adiciona valores intermediários importantes
+    intermediate_values = [200, 300, 500, 700, 1000, 1500, 2000, 3000, 5000, 7000]
+    y_ticks_custom.extend([v for v in intermediate_values if 150 <= v <= 10000])
+    
+    # Remove duplicatas e ordena
+    y_ticks_custom = sorted(list(set(y_ticks_custom)))
+    
+    # Combina com ticks logarítmicos padrão dentro do range
+    current_ticks = plt.gca().get_yticks()
+    current_ticks = [t for t in current_ticks if 150 <= t <= 10000]
+    all_ticks = sorted(list(set(list(current_ticks) + y_ticks_custom)))
+    
+    # Filtra para evitar muitas marcações (mantém apenas valores significativos)
+    filtered_ticks = []
+    for tick in all_ticks:
+        if tick > 0 and (not filtered_ticks or tick / filtered_ticks[-1] > 1.15):
+            filtered_ticks.append(tick)
+    
+    plt.yticks(filtered_ticks, [f'{int(tick)}' if tick >= 1 else f'{tick:.1f}' for tick in filtered_ticks], fontsize=9)
+    
+    plt.legend(fontsize=10)
     
     # Adiciona colorbar
-    cbar = plt.colorbar(im, ax=ax4, shrink=0.8)
+    cbar = plt.colorbar(im, shrink=0.8)
     cbar.set_label('Densidade de Medições', fontsize=10)
     
     plt.tight_layout()
     
-    # Salva gráfico de dispersão
-    output_file = os.path.join(output_dir, 'rtt_scatter_analysis.png')
-    plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"Gráfico de dispersão salvo: {output_file}")
+    # Salva gráfico 4
+    output_file4 = os.path.join(output_dir, 'rtt_heatmap_density.png')
+    plt.savefig(output_file4, dpi=300, bbox_inches='tight')
+    print(f"Gráfico heatmap de densidade salvo: {output_file4}")
     plt.close()
 
 
@@ -510,6 +764,9 @@ def plot_rtt_distribution(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         data: Dicionário com DataFrames de cada cliente
         output_dir: Diretório para salvar gráficos
     """
+    # Cria diretório de saída se não existir
+    os.makedirs(output_dir, exist_ok=True)
+    
     # Combina dados de todos os clientes
     all_data = []
     for client_name, df in data.items():
@@ -628,6 +885,7 @@ def plot_rtt_distribution(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         # Configurar eixos com escala log base 2
         plt.xscale('log', base=2)
         plt.yscale('log')
+        plt.ylim(150, 10000)
         
         # Configurar ticks do eixo x para mostrar os tamanhos
         plt.xticks(violin_positions, [f'{int(size)}' for size in violin_positions], rotation=45)
@@ -637,6 +895,13 @@ def plot_rtt_distribution(data: Dict[str, pd.DataFrame], output_dir: str = "."):
         plt.title('Distribuição Comparativa de RTT por Tamanho de Payload\n(Violin Plot - Escala Logarítmica Base 2)', 
                  fontsize=14, fontweight='bold')
         plt.grid(True, alpha=0.3)
+        
+        # Adiciona legenda explicativa
+        from matplotlib.lines import Line2D
+        legend_elements = [Line2D([0], [0], color='black', lw=2, label='Mediana'),
+                          Line2D([0], [0], color='red', lw=2, label='Média'),
+                          Line2D([0], [0], color='purple', lw=3, alpha=0.7, label='Distribuição de Densidade')]
+        plt.legend(handles=legend_elements, fontsize=10)
         
         # Salva violin plot
         output_file_violin = os.path.join(output_dir, 'rtt_violin_plot.png')
@@ -656,6 +921,9 @@ def generate_report(data: Dict[str, pd.DataFrame], stats: pd.DataFrame,
         stats: DataFrame com estatísticas agregadas
         output_dir: Diretório para salvar relatório
     """
+    # Cria diretório de saída se não existir
+    os.makedirs(output_dir, exist_ok=True)
+    
     report_file = os.path.join(output_dir, 'relatorio_rtt.txt')
     
     with open(report_file, 'w', encoding='utf-8') as f:

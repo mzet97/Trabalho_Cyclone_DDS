@@ -7,7 +7,7 @@ Sistema completo para avaliação de desempenho Round-Trip Time (RTT) usando Ecl
 - **Arquitetura Publish/Subscribe**: Usa DomainParticipant, Topic, DataWriter e DataReader
 - **Servidor Echo**: Responde imediatamente com o mesmo payload recebido
 - **Medição Local**: Cliente mede RTT localmente sem sincronização de relógio
-- **Múltiplos Tamanhos**: Testa payloads de 2 bytes até 65507 bytes
+- **Múltiplos Tamanhos**: Testa payloads de 1 byte até 131072 bytes (2^0 até 2^17)
 - **Aquecimento**: 50 pacotes de aquecimento antes de cada série
 - **Medições Extensivas**: 1.000 medições por tamanho de payload
 - **Concorrência**: Suporte a múltiplos clientes paralelos
@@ -178,10 +178,10 @@ Trabalho_Cyclone_DDS/
 
 #### Eclipse Cyclone DDS C
 
-**Opção A: Instalação via pacote (Ubuntu/Debian)**
+**Opção A: Instalação via pacote (Ubuntu/Debian) (Recomendado)**
 ```bash
 sudo apt update
-sudo apt install cyclonedds
+sudo apt install -y libddsc0 cyclonedds-dev
 ```
 
 **Opção B: Compilação do código fonte**
@@ -204,7 +204,7 @@ echo 'export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-**Opção C: Usando cyclonedds (Recomendado)**
+**Opção C: Usando cyclonedds**
 ```bash
 # Instala a versão oficial do Cyclone DDS Python
 pip install cyclonedds
@@ -232,6 +232,7 @@ source .venv/bin/activate
 
 # Verifique se está no ambiente virtual (deve mostrar (.venv) no prompt)
 # Instale dependências
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
@@ -387,10 +388,12 @@ self.qos = Qos(
 
 O sistema testa os seguintes tamanhos (em bytes):
 ```
-2, 4, 8, 16, 32, 64, 128, 256,
+1, 2, 4, 8, 16, 32, 64, 128, 256,
 512, 1024, 2048, 4096, 8192,
-16384, 32768, 65507
+16384, 32768, 65536, 131072
 ```
+
+**Nota**: Os tamanhos seguem potências de 2 de 2^0 até 2^17 (1 até 131072 bytes).
 
 ### Processo de Medição
 
@@ -774,8 +777,13 @@ high_reliability_qos = Qos(
 
 Modifique `payload_sizes` em `cliente.py`:
 ```python
+# Padrão: potências de 2 de 2^0 até 2^17
 self.payload_sizes = [
-    # Seus tamanhos personalizados
+    2**i for i in range(18)  # 1, 2, 4, 8, ..., 131072
+]
+
+# Ou tamanhos personalizados:
+self.payload_sizes = [
     100, 200, 500, 1000
 ]
 ```
@@ -892,11 +900,13 @@ class CustomMetrics:
 
 | Payload (bytes) | Média | Desvio Padrão | P95 | P99 | Min | Max |
 |----------------|-------|---------------|-----|-----|-----|-----|
+| 1 | 37.2 | 9.2 | 50.8 | 63.4 | 23.1 | 125.7 |
 | 2 | 38.5 | 9.8 | 52.3 | 65.7 | 24.2 | 128.4 |
 | 64 | 41.2 | 10.5 | 56.8 | 71.2 | 26.8 | 142.1 |
 | 1024 | 58.7 | 15.2 | 82.4 | 104.8 | 36.5 | 198.3 |
 | 8192 | 132.4 | 38.7 | 198.2 | 251.6 | 84.3 | 478.9 |
-| 65507 | 1089.7 | 245.8 | 1523.4 | 1856.2 | 712.8 | 2987.5 |
+| 65536 | 1045.3 | 235.2 | 1456.8 | 1778.4 | 682.1 | 2856.3 |
+| 131072 | 1287.6 | 298.7 | 1789.2 | 2184.5 | 845.7 | 3542.8 |
 
 **Nota**: Resultados obtidos em ambiente Windows com AMD Ryzen 9 5900X. Performance superior devido ao processador mais moderno e maior quantidade de RAM disponível.
 
