@@ -13,6 +13,7 @@ import time
 import csv
 import argparse
 import sys
+import uuid
 from datetime import datetime
 from typing import List, Tuple
 from cyclonedds.domain import DomainParticipant
@@ -89,8 +90,12 @@ class RTTClient:
         """
         Configura arquivo CSV para salvar resultados.
         """
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.csv_filename = f"rtt_{self.client_id}_{timestamp}.csv"
+        # Usa timestamp com microssegundos e UUID para evitar conflitos em execução concorrente
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+        microseconds = now.microsecond
+        unique_id = str(uuid.uuid4())[:8]  # Primeiros 8 caracteres do UUID
+        self.csv_filename = f"rtt_{self.client_id}_{timestamp}_{microseconds:06d}_{unique_id}.csv"
         
         # Cria arquivo CSV com cabeçalho
         with open(self.csv_filename, 'w', newline='') as csvfile:
