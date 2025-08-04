@@ -1,0 +1,18 @@
+// VehicleData.idl - Definição de tipos para monitoramento de frota
+
+module VehicleMonitoring {
+    struct Position {
+        double latitude;
+        double longitude;
+        double altitude;
+    };
+    
+    struct VehicleData {
+        string vehicle_id;
+        Position position;
+        double speed;
+        double fuel_level;
+        string status;
+        long long timestamp;
+    };
+};

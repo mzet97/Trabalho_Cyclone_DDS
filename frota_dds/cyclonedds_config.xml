@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- cyclonedds_config.xml - Configuração simplificada para o exemplo de frota -->
+<CycloneDDS xmlns="https://cdx.eclipse.org/0.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://cdx.eclipse.org/0.1 https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain id="0">
+    <General>
+      <!-- Configurações gerais do domínio -->
+      <AllowMulticast>true</AllowMulticast>
+    </General>
+    
+    <Discovery>
+      <!-- Configurações de descoberta -->
+      <ParticipantIndex>auto</ParticipantIndex>
+      <SPDPInterval>30s</SPDPInterval>
+      <DefaultMulticastAddress>239.255.0.1</DefaultMulticastAddress>
+      <Ports>
+        <Base>7400</Base>
+        <DomainGain>250</DomainGain>
+        <ParticipantGain>2</ParticipantGain>
+        <MulticastMetaOffset>0</MulticastMetaOffset>
+        <UnicastMetaOffset>10</UnicastMetaOffset>
+        <MulticastDataOffset>1</MulticastDataOffset>
+        <UnicastDataOffset>11</UnicastDataOffset>
+      </Ports>
+    </Discovery>
+    
+    <Internal>
+      <!-- Configurações internas otimizadas para o exemplo -->
+      <MaxSampleSize>65536B</MaxSampleSize>
+    </Internal>
+    
+    <Tracing>
+      <!-- Configurações de log (desabilitado para performance) -->
+      <Verbosity>warning</Verbosity>
+      <OutputFile>stdout</OutputFile>
+    </Tracing>
+  </Domain>
+</CycloneDDS>

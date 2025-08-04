@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Distribution Service (DDS) - Seminário 40 minutos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --dark-bg: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-color: #667eea;
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8d1;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--dark-bg);
+            overflow: hidden;
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .presentation-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .slide {
+            width: 90%;
+            max-width: 1400px;
+            height: 85vh;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 60px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: none;
+            animation: slideIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(60px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        h2 {
+            font-size: 2.2em;
+            margin-bottom: 25px;
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        h3 {
+            font-size: 1.7em;
+            margin: 25px 0 15px 0;
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+
+        p, li {
+            font-size: 1.25em;
+            line-height: 1.8;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+        }
+
+        ul {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background: linear-gradient(135deg, #1e1e2e 0%, #2a2a3e 100%);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 1.05em;
+            overflow-x: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-gradient);
+            border-radius: 15px 15px 0 0;
+        }
+
+        .keyword { color: #ff79c6; font-weight: bold; }
+        .string { color: #50fa7b; }
+        .comment { color: #6272a4; font-style: italic; }
+        .function { color: #8be9fd; }
+        .decorator { color: #ffb86c; }
+        .number { color: #bd93f9; }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+            background: rgba(15, 12, 41, 0.9);
+            padding: 20px 35px;
+            border-radius: 60px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-btn {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .nav-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-btn:disabled {
+            background: linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%);
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .slide-counter {
+            display: flex;
+            align-items: center;
+            color: var(--text-primary);
+            font-size: 1.2em;
+            font-weight: 600;
+            padding: 0 20px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1001;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            border-left: 4px solid var(--accent-color);
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .center-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+
+        .diagram {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.08) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 20px;
+            padding: 35px;
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .diagram::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .architecture-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.4);
+            border-radius: 20px;
+            padding: 25px;
+            margin: 15px 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .architecture-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.6);
+        }
+
+        .qos-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+            margin-top: 25px;
+        }
+
+        .qos-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+        }
+
+        .qos-item:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-color);
+        }
+
+        .performance-chart {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 250px;
+            margin: 35px 0;
+            padding: 25px;
+            background: linear-gradient(135deg, rgba(15, 12, 41, 0.5) 0%, rgba(48, 43, 99, 0.5) 100%);
+            border-radius: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .bar {
+            width: 100px;
+            background: var(--primary-gradient);
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .bar:hover {
+            transform: scaleY(1.1);
+            filter: brightness(1.2);
+        }
+
+        .subtitle {
+            font-size: 1.6em;
+            color: var(--text-secondary);
+            margin-top: 20px;
+            font-weight: 300;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline-item {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 3px solid var(--accent-color);
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .timeline-item:hover {
+            transform: translateX(10px);
+            border-left-width: 5px;
+        }
+
+        .section-number {
+            position: absolute;
+            top: 25px;
+            right: 35px;
+            background: var(--primary-gradient);
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-weight: bold;
+            color: white;
+            font-size: 1.1em;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .arrow {
+            font-size: 2.5em;
+            color: var(--accent-color);
+            margin: 0 20px;
+            animation: pulse 2s infinite;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+        }
+
+        .icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .slide {
+                padding: 30px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            h2 {
+                font-size: 1.6em;
+            }
+            
+            p, li {
+                font-size: 1.1em;
+            }
+            
+            .two-column, .three-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animações especiais */
+        .fade-in {
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glow {
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(102, 126, 234, 0.5); }
+            to { box-shadow: 0 0 30px rgba(102, 126, 234, 0.8), 0 0 50px rgba(102, 126, 234, 0.4); }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    <div class="presentation-container">
+        
+        <!-- Slide 1: Título -->
+        <div class="slide active">
+            <div class="center-content">
+                <h1 style="font-size: 4em; margin-bottom: 30px;">Data Distribution Service</h1>
+                <p class="subtitle">Um Middleware Data-Cêntrico para Sistemas Distribuídos de Tempo Real</p>
+                <div style="margin-top: 50px;">
+                    <h2 style="color: var(--text-secondary);">Eclipse Cyclone DDS</h2>
+                    <p style="font-size: 1.3em; margin-top: 20px;">Análise de Desempenho e Implementação Prática</p>
+                </div>
+                <div style="margin-top: 60px;">
+                    <p style="color: var(--accent-color); font-size: 1.2em;">Seminário - 40 minutos</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Agenda -->
+        <div class="slide">
+            <div class="section-number">Agenda</div>
+            <h1>Estrutura da Apresentação</h1>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>1. Introdução ao DDS</h3>
+                    <p>Contexto, motivação e principais características do protocolo</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>2. Características do Protocolo</h3>
+                    <p>Paradigma data-cêntrico, estilos de comunicação e protocolo RTPS</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>3. API e Mensagens</h3>
+                    <p>Entidades DDS, políticas de QoS e aspectos de confiabilidade</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>4. Suporte e Bibliotecas</h3>
+                    <p>Eclipse Cyclone DDS, principais atores e ecossistema</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>5. Estudo de Uso da API</h3>
+                    <p>Implementação prática com Python e exemplos de código</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>6. Avaliação de Desempenho</h3>
+                    <p>Análise empírica e regimes operacionais</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>7. Casos de Sucesso</h3>
+                    <p>Aplicações em sistemas críticos e ROS 2</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Introdução - O Problema -->
+        <div class="slide">
+            <div class="section-number">1. Introdução</div>
+            <h1>O Desafio da Comunicação Distribuída</h1>
+            <div class="two-column">
+                <div>
+                    <h3>Abordagens Tradicionais</h3>
+                    <div class="architecture-box">
+                        <h4 style="color: #ff6b6b;">Message-Centric Middleware</h4>
+                        <ul>
+                            <li>JMS, AMQP, MQTT</li>
+                            <li>Aplicação gerencia serialização</li>
+                            <li>Endereçamento explícito</li>
+                            <li>Acoplamento temporal e espacial</li>
+                            <li>Complexidade na aplicação</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h3>Requisitos Modernos</h3>
+                    <div class="architecture-box">
+                        <h4 style="color: #50fa7b;">Sistemas de Tempo Real</h4>
+                        <ul>
+                            <li>Latência determinística</li>
+                            <li>Descoberta automática</li>
+                            <li>QoS configurável</li>
+                            <li>Escalabilidade horizontal</li>
+                            <li>Interoperabilidade garantida</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Problema Central:</strong> Como simplificar o desenvolvimento mantendo garantias de tempo real?</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: O que é DDS -->
+        <div class="slide">
+            <div class="section-number">1. Introdução</div>
+            <h1>Data Distribution Service - Visão Geral</h1>
+            <div class="diagram">
+                <h2>Padrão OMG para Middleware de Tempo Real</h2>
+                <div style="margin-top: 30px;">
+                    <p style="font-size: 1.4em; color: var(--text-primary);">
+                        "Um middleware que virtualiza a rede como um espaço de dados global compartilhado"
+                    </p>
+                </div>
+            </div>
+            <div class="three-column">
+                <div class="feature-card">
+                    <div class="icon">🌐</div>
+                    <h3>Data-Centric</h3>
+                    <p>Abstração de banco de dados distribuído em tempo real</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">🔍</div>
+                    <h3>Auto-Discovery</h3>
+                    <p>Componentes descobrem-se automaticamente</p>
+                </div>
+                <div class="feature-card">
+                    <div class="icon">⚡</div>
+                    <h3>Real-Time</h3>
+                    <p>Latências na ordem de microsegundos</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Principais Características -->
+        <div class="slide">
+            <div class="section-number">1. Introdução</div>
+            <h1>Principais Características do DDS</h1>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>📊 Publish-Subscribe</h3>
+                    <p>Modelo many-to-many desacoplado</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔒 Tipos Fortemente Tipados</h3>
+                    <p>IDL para definição de contratos</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚙️ 20+ Políticas QoS</h3>
+                    <p>Controle fino por fluxo de dados</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🤝 Interoperabilidade</h3>
+                    <p>RTPS garante comunicação entre vendors</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛡️ Segurança Plugável</h3>
+                    <p>DDS Security para domínios críticos</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 Escalabilidade</h3>
+                    <p>De embarcados a data centers</p>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p style="text-align: center; font-size: 1.3em;">
+                    <strong>Diferencial:</strong> Simplicidade na aplicação, complexidade no middleware
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Paradigma Data-Cêntrico -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>O Paradigma Data-Cêntrico</h1>
+            <div class="diagram">
+                <h2>Global Data Space (GDS)</h2>
+                <div style="display: flex; justify-content: center; align-items: center; margin: 40px 0;">
+                    <div class="architecture-box">
+                        <h3>Aplicação A</h3>
+                        <div class="code-block" style="margin-top: 15px;">
+                            writer.<span class="function">write</span>(data)
+                        </div>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box glow">
+                        <h3>Global Data Space</h3>
+                        <p>Espaço de dados virtualizado</p>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box">
+                        <h3>Aplicação B</h3>
+                        <div class="code-block" style="margin-top: 15px;">
+                            data = reader.<span class="function">read</span>()
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Mudança de Paradigma:</strong> De troca de mensagens para espaço de dados compartilhado</p>
+                <p><strong>Benefício:</strong> Aplicações operam sobre dados locais, middleware gerencia distribuição</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Desacoplamento 3D -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>Desacoplamento em Três Dimensões</h1>
+            <div class="three-column">
+                <div class="architecture-box">
+                    <h2 style="text-align: center; color: var(--accent-color);">ESPAÇO</h2>
+                    <p style="margin-top: 20px;"><strong>Característica:</strong></p>
+                    <p>Publicadores e assinantes não conhecem localização física</p>
+                    <p style="margin-top: 15px;"><strong>Benefícios:</strong></p>
+                    <ul>
+                        <li>Mobilidade transparente</li>
+                        <li>Reconfiguração dinâmica</li>
+                        <li>Escalabilidade natural</li>
+                    </ul>
+                </div>
+                <div class="architecture-box">
+                    <h2 style="text-align: center; color: var(--accent-color);">TEMPO</h2>
+                    <p style="margin-top: 20px;"><strong>Característica:</strong></p>
+                    <p>Comunicação assíncrona com histórico</p>
+                    <p style="margin-top: 15px;"><strong>Benefícios:</strong></p>
+                    <ul>
+                        <li>Ritmos independentes</li>
+                        <li>Late joiners suportados</li>
+                        <li>Tolerância a falhas</li>
+                    </ul>
+                </div>
+                <div class="architecture-box">
+                    <h2 style="text-align: center; color: var(--accent-color);">FLUXO</h2>
+                    <p style="margin-top: 20px;"><strong>Característica:</strong></p>
+                    <p>Taxas de produção/consumo independentes</p>
+                    <p style="margin-top: 15px;"><strong>Benefícios:</strong></p>
+                    <ul>
+                        <li>Controle de fluxo automático</li>
+                        <li>Políticas de descarte</li>
+                        <li>Backpressure handling</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Estilos de Comunicação -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>Estilos de Comunicação Suportados</h1>
+            <div class="two-column">
+                <div>
+                    <h3>Padrões Nativos</h3>
+                    <div class="architecture-box">
+                        <h4>📢 Publish-Subscribe</h4>
+                        <p>• Modelo principal do DDS</p>
+                        <p>• Many-to-many desacoplado</p>
+                        <p>• Descoberta automática</p>
+                    </div>
+                    <div class="architecture-box" style="margin-top: 20px;">
+                        <h4>📡 Multicast</h4>
+                        <p>• Eficiência para 1-to-N</p>
+                        <p>• Usa UDP multicast nativo</p>
+                        <p>• Escalabilidade massiva</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>Padrões Emulados</h3>
+                    <div class="architecture-box">
+                        <h4>🔄 Request-Reply</h4>
+                        <p>• Construído sobre pub-sub</p>
+                        <p>• Correlation IDs</p>
+                        <p>• RPC-over-DDS disponível</p>
+                    </div>
+                    <div class="architecture-box" style="margin-top: 20px;">
+                        <h4>📬 Queuing</h4>
+                        <p>• Via políticas QoS</p>
+                        <p>• OWNERSHIP_STRENGTH</p>
+                        <p>• Load balancing possível</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: RTPS Protocol -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>RTPS - Real-Time Publish-Subscribe Protocol</h1>
+            <div class="diagram">
+                <h2>O Protocolo de Interoperabilidade</h2>
+            </div>
+            <div class="two-column">
+                <div>
+                    <h3>Características do RTPS</h3>
+                    <div class="architecture-box">
+                        <p><strong>🌐 Baseado em UDP</strong></p>
+                        <ul>
+                            <li>Controle fino de temporização</li>
+                            <li>Suporte nativo a multicast</li>
+                            <li>Evita overhead do TCP</li>
+                            <li>Previsibilidade temporal</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h3>Elementos do Protocolo</h3>
+                    <div class="architecture-box">
+                        <p><strong>📋 Mensagens RTPS</strong></p>
+                        <ul>
+                            <li>DATA - payload de dados</li>
+                            <li>HEARTBEAT - anúncio de sequências</li>
+                            <li>ACKNACK - confirmação negativa</li>
+                            <li>GAP - indica lacunas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Portas Padrão:</strong> Domínio 0 usa multicast 239.255.0.1:7400</p>
+                <p><strong>Cálculo de Porta:</strong> 7400 + (domainId * 250) + (participantId * 2)</p>
+            </div>
+        </div>
+
+        <!-- Slide 10: Descoberta Automática -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>Simple Discovery Protocol (SDP)</h1>
+            <div class="diagram">
+                <h2>Processo de Descoberta Automática</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 40px 0;">
+                    <div class="architecture-box">
+                        <h3>1. Anúncio</h3>
+                        <p>Participante anuncia:</p>
+                        <ul style="font-size: 0.9em;">
+                            <li>Identidade (GUID)</li>
+                            <li>Endpoints</li>
+                            <li>QoS suportada</li>
+                            <li>Tipos de dados</li>
+                        </ul>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box">
+                        <h3>2. Multicast</h3>
+                        <p><strong>239.255.0.1</strong></p>
+                        <p>Anúncios periódicos</p>
+                        <p>Built-in topics</p>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box">
+                        <h3>3. Matching</h3>
+                        <p>Verifica:</p>
+                        <ul style="font-size: 0.9em;">
+                            <li>Topic name</li>
+                            <li>Type compatibility</li>
+                            <li>QoS compatibility</li>
+                        </ul>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box glow">
+                        <h3>4. Conexão</h3>
+                        <p style="color: #50fa7b;">✓ Automática!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Segurança -->
+        <div class="slide">
+            <div class="section-number">2. Características</div>
+            <h1>Aspectos de Segurança - DDS Security</h1>
+            <div class="diagram">
+                <h2>Framework de Segurança Plugável</h2>
+            </div>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🔐 Autenticação</h3>
+                    <p>• Certificados X.509</p>
+                    <p>• PKI infrastructure</p>
+                    <p>• Mutual authentication</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🛡️ Controle de Acesso</h3>
+                    <p>• Políticas XML assinadas</p>
+                    <p>• Granularidade por tópico</p>
+                    <p>• RBAC suportado</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔒 Criptografia</h3>
+                    <p>• AES-GCM para dados</p>
+                    <p>• RSA/ECDSA para assinaturas</p>
+                    <p>• Perfect forward secrecy</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📝 Logging/Auditoria</h3>
+                    <p>• Eventos de segurança</p>
+                    <p>• Rastreabilidade completa</p>
+                    <p>• Compliance ready</p>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Transparência:</strong> Segurança opera sem modificações na aplicação</p>
+            </div>
+        </div>
+
+        <!-- Slide 12: Hierarquia de Entidades -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>Hierarquia de Entidades DDS</h1>
+            <div class="diagram">
+                <div style="text-align: center;">
+                    <div class="architecture-box glow" style="display: inline-block; padding: 30px 50px;">
+                        <h2>DomainParticipant</h2>
+                        <p>Contêiner principal - conecta ao domínio</p>
+                    </div>
+                    <div style="margin: 30px 0;">↓</div>
+                    <div style="display: flex; justify-content: center; gap: 50px;">
+                        <div class="architecture-box">
+                            <h3>Publisher</h3>
+                            <p>Agrupa DataWriters</p>
+                            <div style="margin-top: 20px;">↓</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                                <strong>DataWriter</strong><br/>
+                                write(), dispose()
+                            </div>
+                        </div>
+                        <div class="architecture-box" style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.15) 0%, rgba(240, 147, 251, 0.15) 100%);">
+                            <h3>Topic</h3>
+                            <p>Canal lógico</p>
+                            <p style="margin-top: 10px;">Nome + Tipo</p>
+                            <p>QoS policies</p>
+                        </div>
+                        <div class="architecture-box">
+                            <h3>Subscriber</h3>
+                            <p>Agrupa DataReaders</p>
+                            <div style="margin-top: 20px;">↓</div>
+                            <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-top: 15px;">
+                                <strong>DataReader</strong><br/>
+                                read(), take()
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Domínios -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>Domínios - Isolamento de Comunicação</h1>
+            <div class="diagram">
+                <h2>Múltiplos Sistemas DDS Coexistindo</h2>
+                <div style="display: flex; justify-content: space-around; margin-top: 40px;">
+                    <div class="architecture-box" style="border-color: #ff6b6b;">
+                        <h3 style="color: #ff6b6b;">Domínio 0</h3>
+                        <p><strong>Produção</strong></p>
+                        <ul>
+                            <li>Sistema principal</li>
+                            <li>Telemetria</li>
+                            <li>Controle</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Port: 7400</p>
+                    </div>
+                    <div class="architecture-box" style="border-color: #50fa7b;">
+                        <h3 style="color: #50fa7b;">Domínio 1</h3>
+                        <p><strong>Desenvolvimento</strong></p>
+                        <ul>
+                            <li>Testes</li>
+                            <li>Debug</li>
+                            <li>Simulação</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Port: 7650</p>
+                    </div>
+                    <div class="architecture-box" style="border-color: #f1fa8c;">
+                        <h3 style="color: #f1fa8c;">Domínio 2</h3>
+                        <p><strong>Staging</strong></p>
+                        <ul>
+                            <li>Validação</li>
+                            <li>Performance</li>
+                            <li>Integration</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Port: 7900</p>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Isolamento Total:</strong> Domínios não interferem entre si na mesma rede física</p>
+            </div>
+        </div>
+
+        <!-- Slide 14: Políticas de QoS Overview -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>Políticas de Qualidade de Serviço (QoS)</h1>
+            <div class="diagram">
+                <h2>20+ Políticas Configuráveis Independentemente</h2>
+            </div>
+            <div class="qos-grid">
+                <div class="qos-item">
+                    <h3 style="color: var(--accent-color);">⚡ Confiabilidade</h3>
+                    <ul>
+                        <li>RELIABILITY</li>
+                        <li>DESTINATION_ORDER</li>
+                        <li>OWNERSHIP</li>
+                    </ul>
+                </div>
+                <div class="qos-item">
+                    <h3 style="color: var(--accent-color);">💾 Durabilidade</h3>
+                    <ul>
+                        <li>DURABILITY</li>
+                        <li>HISTORY</li>
+                        <li>DURABILITY_SERVICE</li>
+                    </ul>
+                </div>
+                <div class="qos-item">
+                    <h3 style="color: var(--accent-color);">⏰ Temporização</h3>
+                    <ul>
+                        <li>DEADLINE</li>
+                        <li>LATENCY_BUDGET</li>
+                        <li>LIFESPAN</li>
+                    </ul>
+                </div>
+                <div class="qos-item">
+                    <h3 style="color: var(--accent-color);">📊 Recursos</h3>
+                    <ul>
+                        <li>RESOURCE_LIMITS</li>
+                        <li>TRANSPORT_PRIORITY</li>
+                        <li>PARTITION</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 15: RELIABILITY Policy -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>RELIABILITY - Garantias de Entrega</h1>
+            <div class="two-column">
+                <div>
+                    <h3>BEST_EFFORT</h3>
+                    <div class="architecture-box">
+                        <p>✓ Máxima eficiência</p>
+                        <p>✓ Sem overhead de confirmação</p>
+                        <p>✓ Ideal para telemetria alta frequência</p>
+                        <div class="code-block" style="margin-top: 20px;">
+                            <span class="comment"># Dados de sensor</span>
+                            qos = Qos(
+                              Policy.Reliability.<span class="function">BestEffort</span>
+                            )
+                        </div>
+                        <p style="margin-top: 15px;"><strong>Use para:</strong> Sensores, vídeo, telemetria</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>RELIABLE</h3>
+                    <div class="architecture-box">
+                        <p>✓ Garantia de entrega</p>
+                        <p>✓ Retransmissão automática</p>
+                        <p>✓ NACKs (não ACKs!)</p>
+                        <div class="code-block" style="margin-top: 20px;">
+                            <span class="comment"># Comandos críticos</span>
+                            qos = Qos(
+                              Policy.Reliability.<span class="function">Reliable</span>(
+                                max_blocking_time=<span class="number">10</span>
+                              )
+                            )
+                        </div>
+                        <p style="margin-top: 15px;"><strong>Use para:</strong> Comandos, configurações, logs</p>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Vantagem sobre TCP:</strong> NACKs reduzem tráfego de controle em 90%+ em redes confiáveis</p>
+            </div>
+        </div>
+
+        <!-- Slide 16: DURABILITY Policy -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>DURABILITY - Persistência Temporal</h1>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3 style="color: #ff6b6b;">VOLATILE</h3>
+                    <p>• Apenas assinantes ativos</p>
+                    <p>• Dados efêmeros</p>
+                    <p>• Menor overhead</p>
+                </div>
+                <div class="feature-card">
+                    <h3 style="color: #f1fa8c;">TRANSIENT_LOCAL</h3>
+                    <p>• Histórico em memória</p>
+                    <p>• Late joiners suportados</p>
+                    <p>• Sobrevive ao assinante</p>
+                </div>
+                <div class="feature-card">
+                    <h3 style="color: #50fa7b;">TRANSIENT</h3>
+                    <p>• Serviço durável</p>
+                    <p>• Sobrevive ao publicador</p>
+                    <p>• Configurações globais</p>
+                </div>
+                <div class="feature-card">
+                    <h3 style="color: var(--accent-color);">PERSISTENT</h3>
+                    <p>• Persistência em disco</p>
+                    <p>• Sobrevive a reboot</p>
+                    <p>• Logs e auditoria</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Políticas Temporais -->
+        <div class="slide">
+            <div class="section-number">3. API</div>
+            <h1>Políticas Temporais e Controle de Recursos</h1>
+            <div class="two-column">
+                <div>
+                    <h3>Controle Temporal</h3>
+                    <div class="architecture-box">
+                        <h4>⏰ DEADLINE</h4>
+                        <p>Contrato de "freshness"</p>
+                        <div class="code-block">
+                            Policy.<span class="function">Deadline</span>(seconds=<span class="number">1</span>)
+                        </div>
+                    </div>
+                    <div class="architecture-box" style="margin-top: 20px;">
+                        <h4>⏳ LIFESPAN</h4>
+                        <p>Validade automática de dados</p>
+                        <div class="code-block">
+                            Policy.<span class="function">Lifespan</span>(seconds=<span class="number">5</span>)
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3>Controle de Recursos</h3>
+                    <div class="architecture-box">
+                        <h4>📚 HISTORY + RESOURCE_LIMITS</h4>
+                        <div class="code-block">
+                            Policy.History.<span class="function">KeepLast</span>(<span class="number">100</span>),
+                            Policy.<span class="function">ResourceLimits</span>(
+                              max_samples=<span class="number">1000</span>,
+                              max_instances=<span class="number">100</span>
+                            )
+                        </div>
+                        <p style="margin-top: 15px;">Controle fino de memória com políticas de descarte bem definidas</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 18: Eclipse Cyclone DDS -->
+        <div class="slide">
+            <div class="section-number">4. Suporte</div>
+            <h1>Eclipse Cyclone DDS</h1>
+            <div class="diagram">
+                <h2>Implementação Open Source de Referência</h2>
+            </div>
+            <div class="two-column">
+                <div>
+                    <h3>Características</h3>
+                    <div class="architecture-box">
+                        <p>✓ 100% compatível com OMG DDS</p>
+                        <p>✓ Implementação em C puro</p>
+                        <p>✓ Bindings para múltiplas linguagens</p>
+                        <p>✓ Performance de microsegundos</p>
+                        <p>✓ Footprint mínimo (~1MB)</p>
+                        <p>✓ Zero configuração necessária</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>Ecossistema</h3>
+                    <div class="architecture-box">
+                        <p><strong>Linguagens Suportadas:</strong></p>
+                        <ul>
+                            <li>C/C++</li>
+                            <li>Python</li>
+                            <li>Rust</li>
+                            <li>Java</li>
+                            <li>C#/.NET</li>
+                        </ul>
+                        <p style="margin-top: 15px;"><strong>Base do ROS 2</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 19: Principais Atores -->
+        <div class="slide">
+            <div class="section-number">4. Suporte</div>
+            <h1>Principais Atores no Ecossistema DDS</h1>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🏢 Vendors Comerciais</h3>
+                    <p><strong>RTI Connext DDS</strong></p>
+                    <p>• Líder de mercado</p>
+                    <p>• Foco em mission-critical</p>
+                    <p><strong>PrismTech Vortex</strong></p>
+                    <p>• IoT e cloud</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🌍 Open Source</h3>
+                    <p><strong>Eclipse Cyclone DDS</strong></p>
+                    <p>• ADLINK contribution</p>
+                    <p>• Base do ROS 2</p>
+                    <p><strong>OpenDDS</strong></p>
+                    <p>• Object Computing</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🏛️ Padronização</h3>
+                    <p><strong>OMG</strong></p>
+                    <p>• Define especificações</p>
+                    <p>• DDS, RTPS, Security</p>
+                    <p><strong>Open Robotics</strong></p>
+                    <p>• Adoção em ROS 2</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 20: Setup Python -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Estudo de Uso - Setup com Python</h1>
+            <div class="code-block">
+<span class="comment"># Instalação simples via pip</span><br>
+$ pip install cyclonedds<br>
+<br>
+<span class="comment"># Importações necessárias</span><br>
+<span class="keyword">from</span> dataclasses <span class="keyword">import</span> dataclass<br>
+<span class="keyword">from</span> cyclonedds.idl <span class="keyword">import</span> IdlStruct<br>
+<span class="keyword">from</span> cyclonedds.domain <span class="keyword">import</span> DomainParticipant<br>
+<span class="keyword">from</span> cyclonedds.topic <span class="keyword">import</span> Topic<br>
+<span class="keyword">from</span> cyclonedds.pub <span class="keyword">import</span> DataWriter<br>
+<span class="keyword">from</span> cyclonedds.sub <span class="keyword">import</span> DataReader<br>
+<span class="keyword">from</span> cyclonedds.core <span class="keyword">import</span> Qos, Policy
+            </div>
+            <div class="highlight-box">
+                <p><strong>Simplicidade:</strong> API Pythônica com decorators padrão do Python</p>
+            </div>
+        </div>
+
+        <!-- Slide 21: Definição de Tipos -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Definição de Tipos com IDL</h1>
+            <div class="code-block">
+<span class="decorator">@dataclass</span><br>
+<span class="keyword">class</span> <span class="function">Position</span>(IdlStruct):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"""Coordenadas GPS tridimensionais"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;latitude: float = <span class="number">0.0</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;longitude: float = <span class="number">0.0</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;altitude: float = <span class="number">0.0</span><br>
+<br>
+<span class="decorator">@dataclass</span><br>
+<span class="keyword">class</span> <span class="function">VehicleData</span>(IdlStruct):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"""Telemetria completa do veículo"""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;vehicle_id: str = <span class="string">""</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;position: Position = <span class="keyword">None</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;speed: float = <span class="number">0.0</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;fuel_level: float = <span class="number">100.0</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;status: str = <span class="string">"OK"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;timestamp: int = <span class="number">0</span>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Benefícios:</strong> Tipos fortemente tipados, serialização automática, evolução controlada</p>
+            </div>
+        </div>
+
+        <!-- Slide 22: Publicador -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Implementação do Publicador</h1>
+            <div class="code-block">
+<span class="keyword">class</span> <span class="function">VehiclePublisher</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">def</span> <span class="function">__init__</span>(self, vehicle_id: str):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Conecta ao domínio DDS</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.participant = <span class="function">DomainParticipant</span>(<span class="number">0</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Define tópico fortemente tipado</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.topic = <span class="function">Topic</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.participant,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="string">"VehicleData"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VehicleData<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># Configura QoS apropriada</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.qos = Qos(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.Reliability.<span class="function">BestEffort</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.History.<span class="function">KeepLast</span>(<span class="number">1</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.<span class="function">Deadline</span>(duration(seconds=<span class="number">5</span>))<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.writer = <span class="function">DataWriter</span>(self.participant, self.topic, qos=self.qos)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">def</span> <span class="function">publish_data</span>(self):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vehicle_data = <span class="function">VehicleData</span>(...)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.writer.<span class="function">write</span>(vehicle_data)&nbsp;&nbsp;<span class="comment"># Operação local rápida</span>
+            </div>
+        </div>
+
+        <!-- Slide 23: Assinante -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Implementação do Assinante</h1>
+            <div class="code-block">
+<span class="keyword">class</span> <span class="function">TrafficMonitor</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">def</span> <span class="function">__init__</span>(self):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.participant = <span class="function">DomainParticipant</span>(<span class="number">0</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.topic = <span class="function">Topic</span>(self.participant, <span class="string">"VehicleData"</span>, VehicleData)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment"># QoS para monitoramento confiável</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.qos = Qos(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.Reliability.<span class="function">Reliable</span>(duration(seconds=<span class="number">10</span>)),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.History.<span class="function">KeepLast</span>(<span class="number">100</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Policy.Durability.<span class="function">TransientLocal</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.reader = <span class="function">DataReader</span>(self.participant, self.topic, qos=self.qos)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">def</span> <span class="function">process_data</span>(self):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;samples = self.reader.<span class="function">take</span>(max_samples=<span class="number">10</span>)&nbsp;&nbsp;<span class="comment"># Remove do cache</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">for</span> sample <span class="keyword">in</span> samples:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">if</span> sample <span class="keyword">is not None</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="function">self.analyze</span>(sample)
+            </div>
+        </div>
+
+        <!-- Slide 24: Sistema Completo -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Sistema de Monitoramento de Frota</h1>
+            <div class="diagram">
+                <h2>Simulação Completa com Múltiplos Veículos</h2>
+                <div style="display: flex; justify-content: space-around; align-items: center; margin: 40px 0;">
+                    <div class="architecture-box">
+                        <h3>5-10 Veículos</h3>
+                        <p>• Publicando 1Hz</p>
+                        <p>• Movimento simulado</p>
+                        <p>• BEST_EFFORT QoS</p>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box glow">
+                        <h3>DDS</h3>
+                        <p>Global Data Space</p>
+                    </div>
+                    <span class="arrow">→</span>
+                    <div class="architecture-box">
+                        <h3>Monitor Central</h3>
+                        <p>• Processamento real-time</p>
+                        <p>• Detecção de anomalias</p>
+                        <p>• RELIABLE QoS</p>
+                    </div>
+                </div>
+            </div>
+            <div class="code-block">
+                <span class="comment"># Output do sistema em execução</span><br>
+                [VEHICLE_001] Pos: (-23.550547, -46.633290), Velocidade: 45.3 km/h<br>
+                [VEHICLE_002] Pos: (-23.548123, -46.631567), Velocidade: 62.7 km/h<br>
+                [ALERTA] VEHICLE_003 com combustível baixo (8.2%)<br>
+                [ESTATÍSTICAS] Veículos ativos: 10, Velocidade média: 51.4 km/h
+            </div>
+        </div>
+
+        <!-- Slide 25: Cenários de Demonstração -->
+        <div class="slide">
+            <div class="section-number">5. Implementação</div>
+            <h1>Cenários de Demonstração Avançados</h1>
+            <div class="two-column">
+                <div>
+                    <h3>🚨 Resposta a Emergências</h3>
+                    <div class="architecture-box">
+                        <p><strong>Cenário:</strong></p>
+                        <p>Coordenação de múltiplos veículos convergindo para local de emergência</p>
+                        <p style="margin-top: 15px;"><strong>Demonstra:</strong></p>
+                        <ul>
+                            <li>Priorização de tráfego</li>
+                            <li>Coordenação distribuída</li>
+                            <li>QoS diferenciada</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h3>🚗 Congestionamento</h3>
+                    <div class="architecture-box">
+                        <p><strong>Cenário:</strong></p>
+                        <p>Propagação de ondas de congestionamento em pelotão</p>
+                        <p style="margin-top: 15px;"><strong>Demonstra:</strong></p>
+                        <ul>
+                            <li>Comportamento emergente</li>
+                            <li>Eventos em cascata</li>
+                            <li>Análise temporal</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 26: Análise de Desempenho -->
+        <div class="slide">
+            <div class="section-number">6. Desempenho</div>
+            <h1>Avaliação de Desempenho</h1>
+            <div class="diagram">
+                <h2>Três Regimes Operacionais Distintos</h2>
+            </div>
+            <div class="performance-chart">
+                <div style="flex: 1; text-align: center;">
+                    <div class="bar" style="height: 30%; background: linear-gradient(180deg, #50fa7b, #2a5298);">
+                        1-2ms
+                    </div>
+                    <p style="margin-top: 10px;"><strong>&lt; 2KB</strong></p>
+                    <p>Overhead Fixo</p>
+                    <p style="color: #50fa7b;">✓ Ideal</p>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div class="bar" style="height: 70%; background: linear-gradient(180deg, #f1fa8c, #ff6b6b);">
+                        Variável
+                    </div>
+                    <p style="margin-top: 10px;"><strong>4-16KB</strong></p>
+                    <p>Fragmentação</p>
+                    <p style="color: #f1fa8c;">⚠️ Evitar</p>
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div class="bar" style="height: 100%; background: var(--primary-gradient);">
+                        Linear
+                    </div>
+                    <p style="margin-top: 10px;"><strong>&gt; 16KB</strong></p>
+                    <p>Transmissão</p>
+                    <p style="color: var(--accent-color);">→ Previsível</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 27: Métricas de Desempenho -->
+        <div class="slide">
+            <div class="section-number">6. Desempenho</div>
+            <h1>Métricas Observadas - Cyclone DDS</h1>
+            <div class="two-column">
+                <div>
+                    <h3>Latência (RTT)</h3>
+                    <div class="architecture-box">
+                        <p><strong>Mensagens pequenas (&lt;2KB):</strong></p>
+                        <p>• P50: 0.8ms</p>
+                        <p>• P99: 1.5ms</p>
+                        <p>• P99.9: 2.1ms</p>
+                        <p style="margin-top: 15px;"><strong>Mensagens grandes (64KB):</strong></p>
+                        <p>• P50: 15ms</p>
+                        <p>• P99: 28ms</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>Throughput</h3>
+                    <div class="architecture-box">
+                        <p><strong>1-to-1 unicast:</strong></p>
+                        <p>• ~900 Mbps (Gigabit Ethernet)</p>
+                        <p style="margin-top: 15px;"><strong>1-to-N multicast:</strong></p>
+                        <p>• Escala linearmente até 100+ assinantes</p>
+                        <p style="margin-top: 15px;"><strong>Mensagens/segundo:</strong></p>
+                        <p>• 50,000+ msgs/s (256 bytes)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 28: Estratégias de Otimização -->
+        <div class="slide">
+            <div class="section-number">6. Desempenho</div>
+            <h1>Estratégias de Otimização</h1>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>📦 Design de Mensagens</h3>
+                    <p>• Preferir múltiplas pequenas</p>
+                    <p>• Evitar zona 4-16KB</p>
+                    <p>• Chunking para grandes volumes</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚙️ Configuração QoS</h3>
+                    <p>• RELIABILITY tem custo</p>
+                    <p>• Balance HISTORY/RESOURCES</p>
+                    <p>• Batching quando possível</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚀 Features Avançadas</h3>
+                    <p>• Zero-copy para grandes dados</p>
+                    <p>• Content filtering</p>
+                    <p>• Multicast para 1-to-N</p>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Regra de Ouro:</strong> Mensagens &lt; 2KB para latência mínima, batching para throughput máximo</p>
+            </div>
+        </div>
+
+        <!-- Slide 29: Casos de Sucesso -->
+        <div class="slide">
+            <div class="section-number">7. Casos</div>
+            <h1>Casos de Sucesso em Produção</h1>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>✈️ Controle de Tráfego Aéreo</h3>
+                    <p><strong>Eurocontrol</strong></p>
+                    <p>• 35.000+ voos/dia</p>
+                    <p>• Latência < 100ms</p>
+                    <p>• 99.999% uptime</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚓ AEGIS Combat System</h3>
+                    <p><strong>US Navy</strong></p>
+                    <p>• 100+ subsistemas</p>
+                    <p>• Interoperabilidade total</p>
+                    <p>• Mission-critical</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🤖 ROS 2</h3>
+                    <p><strong>Open Robotics</strong></p>
+                    <p>• Padrão em robótica</p>
+                    <p>• 1000+ packages</p>
+                    <p>• Comunidade global</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚗 Veículos Autônomos</h3>
+                    <p><strong>Múltiplos OEMs</strong></p>
+                    <p>• Fusão de sensores</p>
+                    <p>• 100+ Hz updates</p>
+                    <p>• Safety-critical</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🏭 Indústria 4.0</h3>
+                    <p><strong>Smart Factories</strong></p>
+                    <p>• 10.000+ sensores</p>
+                    <p>• Edge computing</p>
+                    <p>• Digital twins</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🏥 Healthcare</h3>
+                    <p><strong>Medical Devices</strong></p>
+                    <p>• FDA approved</p>
+                    <p>• Real-time monitoring</p>
+                    <p>• Life support systems</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 30: ROS 2 Case Study -->
+        <div class="slide">
+            <div class="section-number">7. Casos</div>
+            <h1>Case Study: ROS 2 e DDS</h1>
+            <div class="diagram">
+                <h2>Por que ROS 2 escolheu DDS?</h2>
+            </div>
+            <div class="two-column">
+                <div>
+                    <h3>Requisitos do ROS 2</h3>
+                    <div class="architecture-box">
+                        <p>✓ Comunicação em tempo real</p>
+                        <p>✓ Descoberta automática</p>
+                        <p>✓ QoS configurável</p>
+                        <p>✓ Segurança integrada</p>
+                        <p>✓ Interoperabilidade</p>
+                        <p>✓ Escalabilidade</p>
+                    </div>
+                </div>
+                <div>
+                    <h3>Benefícios Obtidos</h3>
+                    <div class="architecture-box">
+                        <p>• Redução de 80% no código de infraestrutura</p>
+                        <p>• Performance 10x melhor que ROS 1</p>
+                        <p>• Suporte nativo a real-time</p>
+                        <p>• Certificação para safety-critical</p>
+                        <p>• Ecossistema maduro</p>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Resultado:</strong> DDS tornou-se a fundação para o futuro da robótica</p>
+            </div>
+        </div>
+
+        <!-- Slide 31: Veículos Autônomos -->
+        <div class="slide">
+            <div class="section-number">7. Casos</div>
+            <h1>Veículos Autônomos - Arquitetura DDS</h1>
+            <div class="diagram">
+                <h2>Integração de Sensores com QoS Diferenciada</h2>
+                <div style="margin-top: 30px;">
+                    <div class="three-column">
+                        <div class="architecture-box">
+                            <h3>LiDAR (100Hz)</h3>
+                            <p>• BEST_EFFORT</p>
+                            <p>• DEADLINE: 20ms</p>
+                            <p>• Point clouds</p>
+                        </div>
+                        <div class="architecture-box">
+                            <h3>Câmeras (30Hz)</h3>
+                            <p>• BEST_EFFORT</p>
+                            <p>• LIFESPAN: 100ms</p>
+                            <p>• Compressed images</p>
+                        </div>
+                        <div class="architecture-box">
+                            <h3>Control (50Hz)</h3>
+                            <p>• RELIABLE</p>
+                            <p>• PRIORITY: HIGH</p>
+                            <p>• Safety commands</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p><strong>Vantagem DDS:</strong> Cada sensor com QoS otimizada, sistema modular e extensível</p>
+            </div>
+        </div>
+
+        <!-- Slide 32: Comparação com Alternativas -->
+        <div class="slide">
+            <div class="section-number">8. Conclusão</div>
+            <h1>DDS vs Alternativas</h1>
+            <table style="width: 100%; margin-top: 30px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--primary-gradient); color: white;">
+                        <th style="padding: 15px; border: 1px solid rgba(255,255,255,0.2);">Característica</th>
+                        <th style="padding: 15px; border: 1px solid rgba(255,255,255,0.2);">DDS</th>
+                        <th style="padding: 15px; border: 1px solid rgba(255,255,255,0.2);">MQTT</th>
+                        <th style="padding: 15px; border: 1px solid rgba(255,255,255,0.2);">AMQP</th>
+                        <th style="padding: 15px; border: 1px solid rgba(255,255,255,0.2);">Kafka</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: rgba(255,255,255,0.05);">
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Paradigma</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); color: #50fa7b;">Data-centric</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Message-centric</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Message-centric</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Log-centric</td>
+                    </tr>
+                    <tr style="background: rgba(255,255,255,0.02);">
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Discovery</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); color: #50fa7b;">Automática</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Broker</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Broker</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Broker</td>
+                    </tr>
+                    <tr style="background: rgba(255,255,255,0.05);">
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">QoS</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); color: #50fa7b;">20+ políticas</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">3 níveis</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Básico</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Limitado</td>
+                    </tr>
+                    <tr style="background: rgba(255,255,255,0.02);">
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Real-time</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); color: #50fa7b;">Sim</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Não</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Não</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Não</td>
+                    </tr>
+                    <tr style="background: rgba(255,255,255,0.05);">
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">Latência</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1); color: #50fa7b;">μs-ms</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">ms-s</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">ms-s</td>
+                        <td style="padding: 15px; border: 1px solid rgba(255,255,255,0.1);">ms-s</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Slide 33: Quando Usar DDS -->
+        <div class="slide">
+            <div class="section-number">8. Conclusão</div>
+            <h1>Quando Usar DDS?</h1>
+            <div class="two-column">
+                <div>
+                    <h3 style="color: #50fa7b;">✅ Use DDS quando:</h3>
+                    <div class="architecture-box">
+                        <ul>
+                            <li>Latência determinística é crítica</li>
+                            <li>Sistema distribuído complexo</li>
+                            <li>Múltiplos produtores/consumidores</li>
+                            <li>QoS diferenciada por fluxo</li>
+                            <li>Descoberta automática necessária</li>
+                            <li>Interoperabilidade entre vendors</li>
+                            <li>Safety/mission-critical</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="color: #ff6b6b;">❌ Evite DDS quando:</h3>
+                    <div class="architecture-box">
+                        <ul>
+                            <li>Sistema simples cliente-servidor</li>
+                            <li>Latência de segundos é aceitável</li>
+                            <li>Arquitetura centralizada</li>
+                            <li>Throughput mais importante que latência</li>
+                            <li>Integração com sistemas legados</li>
+                            <li>Recursos muito limitados</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 34: Conclusões Finais -->
+        <div class="slide">
+            <div class="section-number">8. Conclusão</div>
+            <h1>Conclusões</h1>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>🎯 Paradigma Revolucionário</h3>
+                    <p>Data-centric simplifica drasticamente o desenvolvimento de sistemas distribuídos</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>⚡ Performance Excepcional</h3>
+                    <p>Latências de microsegundos com throughput de gigabits</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>🔧 Flexibilidade Única</h3>
+                    <p>20+ políticas QoS permitem otimização cirúrgica</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>🤝 Interoperabilidade Garantida</h3>
+                    <p>RTPS assegura comunicação entre diferentes implementações</p>
+                </div>
+                <div class="timeline-item">
+                    <h3>✅ Validado em Produção</h3>
+                    <p>Desde controle de tráfego aéreo até ROS 2 - provado onde falha não é opção</p>
+                </div>
+            </div>
+            <div class="highlight-box">
+                <p style="text-align: center; font-size: 1.4em;">
+                    <strong>DDS representa a evolução natural para sistemas distribuídos de tempo real</strong>
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 35: Referências -->
+        <div class="slide">
+            <div class="section-number">Referências</div>
+            <h1>Referências Bibliográficas</h1>
+            <div class="architecture-box">
+                <h3>Especificações OMG</h3>
+                <ul>
+                    <li>OMG. Data Distribution Service (DDS) v1.4, 2015</li>
+                    <li>OMG. Real-Time Publish-Subscribe Protocol (RTPS) v2.5, 2022</li>
+                    <li>OMG. DDS Security v1.1, 2018</li>
+                </ul>
+            </div>
+            <div class="architecture-box" style="margin-top: 20px;">
+                <h3>Artigos e Surveys</h3>
+                <ul>
+                    <li>Ali, H. et al. "A Survey on Data Distribution Service", 2023</li>
+                    <li>Pardo-Castellote, G. "OMG Data Distribution Service: Architectural Overview", 2003</li>
+                </ul>
+            </div>
+            <div class="architecture-box" style="margin-top: 20px;">
+                <h3>Recursos Online</h3>
+                <ul>
+                    <li>Eclipse Cyclone DDS Documentation</li>
+                    <li>ROS 2 DDS Implementation Guide</li>
+                    <li>RTI Connext DDS Best Practices</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Slide 36: Perguntas -->
+        <div class="slide">
+            <div class="center-content">
+                <h1 style="font-size: 4.5em; margin-bottom: 40px;">Perguntas?</h1>
+                <div class="diagram glow" style="padding: 50px;">
+                    <h2>Obrigado pela atenção!</h2>
+                    <p style="font-size: 1.4em; margin-top: 30px;">
+                        Discussão aberta sobre DDS e sistemas distribuídos
+                    </p>
+                </div>
+                <div style="margin-top: 50px;">
+                    <p style="font-size: 1.3em;">📧 Contato para dúvidas</p>
+                    <p style="font-size: 1.3em;">💻 Código disponível no GitHub</p>
+                    <p style="font-size: 1.3em;">📚 Material complementar</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Anterior</button>
+        <div class="slide-counter">
+            <span id="currentSlide">1</span> / <span id="totalSlides">36</span>
+        </div>
+        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Próximo →</button>
+    </div>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 36;
+
+        function showSlide(n) {
+            const slides = document.getElementsByClassName('slide');
+            
+            if (n > totalSlides) currentSlide = totalSlides;
+            if (n < 1) currentSlide = 1;
+            
+            for (let i = 0; i < slides.length; i++) {
+                slides[i].classList.remove('active');
+            }
+            
+            slides[currentSlide - 1].classList.add('active');
+            
+            // Update counter
+            document.getElementById('currentSlide').textContent = currentSlide;
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = currentSlide === 1;
+            document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+            
+            // Update progress bar
+            const progress = (currentSlide / totalSlides) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        function changeSlide(n) {
+            currentSlide += n;
+            showSlide(currentSlide);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') changeSlide(-1);
+            if (event.key === 'ArrowRight') changeSlide(1);
+            if (event.key === 'Home') {
+                currentSlide = 1;
+                showSlide(currentSlide);
+            }
+            if (event.key === 'End') {
+                currentSlide = totalSlides;
+                showSlide(currentSlide);
+            }
+            if (event.key === 'f' || event.key === 'F') {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', function(event) {
+            touchStartX = event.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', function(event) {
+            touchEndX = event.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) changeSlide(1);  // Swipe left
+            if (touchEndX > touchStartX + 50) changeSlide(-1); // Swipe right
+        }
+
+        // Timer for presentation (40 minutes)
+        let presentationTime = 0;
+        setInterval(() => {
+            presentationTime++;
+            // Optional: Add timer display or warnings
+        }, 1000);
+
+        // Initialize
+        showSlide(1);
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        // Preload animations
+        window.addEventListener('load', () => {
+            document.querySelectorAll('.slide').forEach(slide => {
+                slide.style.animation = 'none';
+                slide.offsetHeight; // Trigger reflow
+                slide.style.animation = null;
+            });
+        });
+    </script>
+</body>
+</html>
