@@ -1397,12 +1397,15 @@ $ pip install cyclonedds<br>
                     <h3>Latência (RTT)</h3>
                     <div class="architecture-box">
                         <p><strong>Mensagens pequenas (&lt;2KB):</strong></p>
-                        <p>• P50: 0.8ms</p>
-                        <p>• P99: 1.5ms</p>
-                        <p>• P99.9: 2.1ms</p>
+                        <p>• P50: 1.2ms</p>
+                        <p>• P99: 1.51ms</p>
+                        <p>• P99.9: 1.6ms</p>
                         <p style="margin-top: 15px;"><strong>Mensagens grandes (64KB):</strong></p>
-                        <p>• P50: 15ms</p>
-                        <p>• P99: 28ms</p>
+                        <p>• P50: 7.78ms</p>
+                        <p>• P99: 8.80ms</p>
+                        <p style="margin-top: 15px;"><strong>Mensagens grandes (131KB):</strong></p>
+                        <p>• P50: 14.74ms</p>
+                        <p>• P99: 16.83ms</p>
                     </div>
                 </div>
                 <div>
@@ -1412,8 +1415,6 @@ $ pip install cyclonedds<br>
                         <p>• ~900 Mbps (Gigabit Ethernet)</p>
                         <p style="margin-top: 15px;"><strong>1-to-N multicast:</strong></p>
                         <p>• Escala linearmente até 100+ assinantes</p>
-                        <p style="margin-top: 15px;"><strong>Mensagens/segundo:</strong></p>
-                        <p>• 50,000+ msgs/s (256 bytes)</p>
                     </div>
                 </div>
             </div>
